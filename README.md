@@ -1,6 +1,8 @@
 # fonttools-opentype-hinting-freezer
 
-`pyfthintfreeze` CLI tool and a Python 3.x library that applies the hinting of an existing OT font to the contours of that font, at a specified PPM size, and outputs the font with modified contours.
+`pyfthintfreeze` CLI tool and a Python 3.x library that applies the hinting of an existing OT font to the contours of that font, at a specified PPM size, and outputs the font with modified contours. 
+
+The tool uses FreeType to run the hinting code. It works better with TTF, OTF support is buggy.
 
 ## Installation
 
@@ -49,14 +51,14 @@ NOTES
 ## Examples
 
 ```
-pyfthintfreeze CharisSIL-Regular.ttf --ppm=12 --mode="mono"
+pyfthintfreeze CharisSIL-Regular.ttf --ppm=12 --mode="lcd"
 ```
 
-Original: 
+Original [CharisSIL-Regular.ttf](https://github.com/google/fonts/blob/main/ofl/charissil/CharisSIL-Regular.ttf) font:
 
 ![CharisSIL-Regular](./assets/CharisSIL-Regular.png)
 
-Modified: 
+The font with hinting in LCD mode applied at 12 ppm:
 
 ![CharisSIL-Regular.fhf-12-lcd.png](./assets/CharisSIL-Regular.fhf-12-lcd.png)
 
@@ -66,13 +68,13 @@ Modified:
 pyfthintfreeze Roboto-Black.ttf --ppm=12 --mode="mono"
 ```
 
-Original: 
+Original [Roboto-Black.ttf](https://github.com/google/fonts/blob/main/apache/roboto/static/Roboto-Black.ttf) font: 
 
 ![Roboto-Black](./assets/Roboto-Black.png)
 
-Modified: 
+The font with hinting in monochrome mode applied at 12 ppm: 
 
-![Roboto-Black.fhf-12-lcd.png](./assets/Roboto-Black.fhf-12-lcd.png)
+![Roboto-Black.fhf-12-lcd.png](./assets/Roboto-Black.fhf-12-mono.png)
 
 ## Credits and License
 
