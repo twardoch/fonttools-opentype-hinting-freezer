@@ -1,6 +1,6 @@
-# fonttools-opentype-hint-freezer
+# fonttools-opentype-hinting-freezer
 
-A tool that applies the font's hinting to the contours at a specified PPM size, and outputs the font with modified contours.
+`pyfthintfreeze` CLI tool and a Python 3.x library that applies the hinting of an existing OT font to the contours of that font, at a specified PPM size, and outputs the font with modified contours.
 
 ## Installation
 
