@@ -52,6 +52,8 @@ NOTES
 pyfthintfreeze font.ttf --ppm=14 --mode="mono"
 ```
 
-## License
+## Credits and License
 
-Apache 2
+- Copyright (c) 2022 by [Adam Twardoch and others](./AUTHORS.txt)
+- Code by [Adam Twardoch and others](./CONTRIBUTORS.txt)
+- Licensed under the [Apache 2.0 license](./LICENSE)
