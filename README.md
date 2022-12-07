@@ -5,7 +5,7 @@ A tool that applies the font's hinting to the contours at a specified PPM size, 
 ## Installation
 
 ```
-python3 -m pip install --upgrade git+https://github.com/twardoch/fonttools-opentype-feature-freezer
+python3 -m pip install --upgrade git+https://github.com/twardoch/fonttools-opentype-hinting-freezer
 ```
 
 ## Usage
