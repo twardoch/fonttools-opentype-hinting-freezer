@@ -46,11 +46,33 @@ NOTES
     You can also use flags syntax for POSITIONAL ARGUMENTS
 ```
 
-## Example
+## Examples
 
 ```
-pyfthintfreeze font.ttf --ppm=14 --mode="mono"
+pyfthintfreeze CharisSIL-Regular.ttf --ppm=12 --mode="mono"
 ```
+
+Original: 
+
+![CharisSIL-Regular](./assets/CharisSIL-Regular.png)
+
+Modified: 
+
+![CharisSIL-Regular.fhf-12-lcd.png](./assets/CharisSIL-Regular.fhf-12-lcd.png)
+
+---
+
+```
+pyfthintfreeze Roboto-Black.ttf --ppm=12 --mode="mono"
+```
+
+Original: 
+
+![Roboto-Black](./assets/Roboto-Black.png)
+
+Modified: 
+
+![Roboto-Black.fhf-12-lcd.png](./assets/Roboto-Black.fhf-12-lcd.png)
 
 ## Credits and License
 
