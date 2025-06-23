@@ -77,10 +77,10 @@ class FontHintFreezer:
     def set_var_location(self, var_location: Dict[str, float]) -> None:
         if "fvar" not in self.ttFont:
             return
-        coordinates_values: List[float] = []
-        for axis in self.ttFont["fvar"].axes: # type: ignore[attr-defined] # fvar may not exist
-            coordinates_values.append(var_location.get(axis.axisTag, axis.defaultValue)) # type: ignore[attr-defined]
-
+        coordinates_values: List[float] = [
+            var_location.get(axis.axisTag, axis.defaultValue)
+            for axis in self.ttFont["fvar"].axes
+        ]
         ft_coordinates_values: List[int] = [round(v * 0x10000) for v in coordinates_values]
         c_coordinates = (FT_Fixed * len(ft_coordinates_values))(*ft_coordinates_values)
         FT_Set_Var_Design_Coordinates(
