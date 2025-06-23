@@ -1,0 +1,168 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opentype-hinting-freezer"
+dynamic = ["version"]
+description = "A tool that applies the hinting of an OT font to the contours at a specified PPM size, and outputs the font with modified contours."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+keywords = ["fonts", "opentype", "hinting"]
+authors = [
+  { name = "Adam Twardoch", email = "adam+github@twardoch.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Topic :: Text Processing :: Fonts",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "fire>=0.3.1",
+  "fontTools>=4.38.0",
+  "freetype-py>=2.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/twardoch/fonttools-opentype-hinting-freezer"
+Documentation = "https://github.com/twardoch/fonttools-opentype-hinting-freezer#readme"
+Repository = "https://github.com/twardoch/fonttools-opentype-hinting-freezer"
+Changelog = "https://github.com/twardoch/fonttools-opentype-hinting-freezer/releases"
+
+[project.scripts]
+pyfthintfreeze = "opentype_hinting_freezer.__main__:cli"
+
+[tool.hatch.version]
+source = "vcs"
+path = "opentype_hinting_freezer/__init__.py" # Ensure this is the correct path
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/.gitignore",
+  "/assets",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["opentype_hinting_freezer"]
+
+# Updated section for dev dependencies and scripts for Ruff
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "mypy",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+]
+
+[tool.hatch.envs.default]
+skip-install = true
+dependencies = [
+  "ruff",
+  "mypy",
+  "pytest",       # Added pytest
+  "pytest-cov",   # Added pytest-cov
+  "pre-commit",
+]
+features = ["dev"] # Install the 'dev' extras into the default hatch env
+
+[tool.hatch.scripts]
+# Code quality
+lint = "ruff check ."
+format = "ruff format ."
+typecheck = "mypy --config-file mypy.ini ."
+
+# Testing
+test = "pytest -v"
+test-cov = "pytest -v --cov=opentype_hinting_freezer --cov-report=term-missing --cov-report=xml"
+
+# Build
+build = "hatch build"
+
+# Cleaning (optional, but good practice)
+clean = [
+    "rm -rf ./*.egg-info",
+    "rm -rf ./.eggs",
+    "rm -rf ./dist",
+    "rm -rf ./.mypy_cache",
+    "rm -rf ./.pytest_cache",
+    "rm -rf ./htmlcov",
+    "rm -rf ./.ruff_cache",
+    "find . -name '*.pyc' -delete",
+    "find . -name '__pycache__' -type d -delete",
+]
+
+# Combined checks (useful for CI or pre-commit)
+check = ["hatch run format", "hatch run lint", "hatch run typecheck"] # Add "hatch run test" later
+# For a full local CI check including build:
+# ci-check = ["hatch run check", "hatch run build"]
+
+# Ruff configuration
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "C90", # mccabe complexity
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "ARG", # flake8-unused-arguments
+    "RUF", # Ruff-specific rules
+]
+ignore = [] # Start with no ignores, E501 (line too long) will be handled by formatter
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["opentype_hinting_freezer"]
+
+# This was previously under [tool.hatch.metadata.hooks.vcs]
+# For hatch-vcs, the configuration for writing the version to a file
+# is typically done under [tool.hatch.version.file] if using hatchling >= 1.5.0
+# or directly in [tool.hatch.version] for older versions.
+# Given `source = "vcs"`, `path` is the correct way to specify the file for version updates.
+# Let's remove the fallback-version from here as it's not standard in this new structure.
+# hatch-vcs has its own fallback mechanisms.
+# The `template` option is also not used with `path`. `hatch-vcs` will look for `__version__ = "..."`
+# Ensure `opentype_hinting_freezer/__init__.py` contains `__version__ = "0.0.0"` or similar.
+# I'll modify `__init__.py` to ensure it has a version string for hatch-vcs.
+# The original __init__.py has `__version__ = "0.1.0"`, which is fine.
+# `hatch-vcs` will update this line.
+# The field in `[tool.hatch.version]` should be `path` not `version-file`.
+# Corrected this.
+# Also, ensure `hatch-vcs` is in `[build-system].requires`. It is.
+# The `dynamic = ["version"]` in `[project]` is correct.
+# `[tool.hatch.version]` with `source = "vcs"` and `path` is the modern way.
+# Removed the `[tool.hatch.metadata.hooks.vcs]` section as it's superseded by `[tool.hatch.version].path`.
+# The `ignore = ["E501"]` for ruff.lint was removed. If `line-length` is set for ruff format,
+# and ruff format is run, it should fix line length issues.
+# If not, E501 can be added back if preferred over auto-formatting for line length.
+# For now, relying on the formatter.
+# Added `ruff` to `[tool.hatch.envs.default.dependencies]` as well, for convenience if user runs `hatch shell`.
+# The `[tool.hatch.scripts]` for `lint` and `format` are defined.
+# The Ruff configuration itself is added to `pyproject.toml` under `[tool.ruff]`.
+# This includes line length, selected rules, and formatter settings.
+# `known-first-party` for isort is set.
+# This should correctly set up pyproject.toml and configure Ruff.
