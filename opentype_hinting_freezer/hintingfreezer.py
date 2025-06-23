@@ -65,7 +65,7 @@ class FontHintFreezer:
         self.width = 0
         self.lsb = 0
         self.upm = self.ftFace.units_per_EM
-        self.ppm = ppm if ppm else self.upm # ppm can't be 0
+        self.ppm = ppm or self.upm # ppm can't be 0
         self.rescale_metrics = float(self.upm) / float(self.ppm) / 64.0
         self.rescale_glyphs = int(float(self.upm) / float(self.ppm) / 64.0 * 0x10000)
         self.ftFace.set_char_size(self.ppm * 64, 0, 72, 0)
