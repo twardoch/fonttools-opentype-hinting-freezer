@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import fire  # type: ignore[import-untyped]
-from typing import List, Any, IO
+import fire
+
 from .hintingfreezer import freezehinting
 
 

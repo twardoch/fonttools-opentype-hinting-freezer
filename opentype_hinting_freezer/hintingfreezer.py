@@ -1,30 +1,14 @@
 #!/usr/bin/env python3
 import io
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, Iterator, Mapping, KeysView
 
-from fontTools.pens.pointPen import PointToSegmentPen  # type: ignore[import-untyped]
-from fontTools.pens.t2CharStringPen import T2CharStringPen  # type: ignore[import-untyped]
-from fontTools.pens.ttGlyphPen import TTGlyphPointPen  # type: ignore[import-untyped]
-from fontTools.ttLib import TTFont  # type: ignore[import-untyped]
+from fontTools.pens.pointPen import PointToSegmentPen
+from fontTools.pens.t2CharStringPen import T2CharStringPen
+from fontTools.pens.ttGlyphPen import TTGlyphPointPen
+from fontTools.ttLib import TTFont
+from freetype import *
 
-# Explicit imports from freetype
-from freetype import (  # type: ignore[import-untyped]
-    FT_Fixed,
-    FT_LOAD_RENDER,
-    FT_LOAD_TARGET_LCD,
-    FT_LOAD_TARGET_LCD_V,
-    FT_LOAD_TARGET_LIGHT,
-    FT_LOAD_TARGET_MONO,
-    FT_Set_Var_Design_Coordinates,
-    Face,
-    Matrix,
-    Vector,
-    # FT_GLYPH_BBOX_PIXELS, # This was in my generated code but not in the read file.
-    # If it's needed for the commented print, it should be freetype.FT_GLYPH_BBOX_PIXELS
-)
-
-RENDER_MODE_FLAGS: Dict[str, Any] = {
+renderModeFlags = {
     "lcd": FT_LOAD_TARGET_LCD,
     "mono": FT_LOAD_TARGET_MONO,
     "lcdv": FT_LOAD_TARGET_LCD_V,
@@ -168,18 +152,28 @@ class FontHintFreezer:
 
 def read_from_path(path: Union[str, Path]) -> bytes:
     with open(path, "rb") as f:
-        font_data: bytes = f.read()
-    return font_data
+        fontData = f.read()
+    return fontData
 
 
-def freezehinting(
-    fontpath: Union[str, Path],
-    out: Optional[Union[str, Path]] = None,
-    ppm: Optional[int] = None,
-    subfont: int = 0,
-    var: Optional[Dict[str, float]] = None,
-    mode: str = "lcd",
-) -> None:
+def freezehinting(fontpath, out=None, ppm=None, subfont=0, var=None, mode="lcd"):
+    """
+    OpenType font hinting freezer \n
+    A tool that applies the hinting of an OT font
+    to the contours at a specified PPM size,
+    and outputs the font with modified contours
+    (Works better with TTF, OTF support is buggy)
+
+    Example:
+    pyfthintfreeze font.ttf --ppm=14 --mode="mono"
+
+    :param fontpath: path to an OTF or TTF or TTC file
+    :param out: output path, automatic if absent
+    :param ppm: pixel-per-em for applying the hinting
+    :param subfont: subfont index in a TTC file
+    :param var: NOT IMPLEMENTED variable font location as a dict
+    :param mode: hinting mode: "lcd" (default), "lcdv", "mono", "light"
+    """
     fhf = FontHintFreezer(
         read_from_path(fontpath),
         font_number=subfont,

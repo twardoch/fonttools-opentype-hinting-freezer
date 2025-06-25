@@ -1,3 +1,3 @@
-from .hintingfreezer import freezehinting as freezehinting
+from .hintingfreezer import freezehinting
 
-__version__: str = "0.1.0"
+__version__ = "0.1.0"
