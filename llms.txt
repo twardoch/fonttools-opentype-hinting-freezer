@@ -1,0 +1,1288 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+opentype_hinting_freezer/
+  __init__.py
+  __main__.py
+  hintingfreezer.py
+tests/
+  generate_minimal_ttf.py
+  sample_data.bin
+  test_cli_integration.py
+  test_hintingfreezer_unit.py
+.gitignore
+AUTHORS.txt
+CONTRIBUTORS.txt
+LICENSE
+mypy.ini
+pyproject.toml
+README.md
+setup.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="tests/generate_minimal_ttf.py">
+from fontTools.fontBuilder import FontBuilder
+from fontTools.ttLib.tables._g_l_y_f import Glyph
+from fontTools.pens.ttGlyphPen import TTGlyphPen
+
+def create_minimal_ttf(filepath="tests/data/minimal.ttf"):
+    """
+    Creates a very minimal, valid TTF file with a single .notdef glyph.
+    """
+    fb = FontBuilder(1024, isTTF=True)
+    fb.setupGlyphOrder([".notdef"])
+    fb.setupCharacterMap({0: ".notdef"})  # Map U+0000 to .notdef
+
+    # Create a .notdef glyph (e.g., a simple box)
+    pen = TTGlyphPen(None)
+    pen.moveTo((100, 100))
+    pen.lineTo((100, 500))
+    pen.lineTo((400, 500))
+    pen.lineTo((400, 100))
+    pen.closePath()
+    glyph = pen.glyph()
+
+    # Setup glyf table before assigning to it
+    fb.setupGlyf({})
+    fb.font["glyf"][".notdef"] = glyph
+    glyph.recalcBounds(fb.font["glyf"]) # Now this should work
+
+    fb.font["hmtx"] = {".notdef": (500, 100)} # width, lsb
+    # fb.font["loca"] # loca is built by setupMaxp/save if not explicitly done
+
+    # Add other required tables in a more robust order
+    name_records = {
+        1: "Minimal Test Font",  # Family Name
+        2: "Regular",            # Style Name (Subfamily)
+        3: "Minimal Test Font Regular Unique", # Unique font identifier
+        4: "Minimal Test Font Regular",      # Full font name
+        6: "MinimalTestFont-Regular",        # PostScript name
+        5: "Version 0.1"         # Version string
+    }
+    fb.setupNameTable(name_records)
+    fb.setupHead(unitsPerEm=1024, created=0, modified=0) # Add created/modified
+    fb.setupHorizontalHeader(ascent=800, descent=-200) # Provide some default values
+    fb.setupHorizontalMetrics(fb.font["hmtx"]) # Pass the hmtx dict
+    fb.setupOS2(sTypoAscender=800, sTypoDescender=-200, usWinAscent=800, usWinDescent=200, achVendID="TEST") # Add some required OS/2 fields
+    fb.setupPost(isFixedPitch=0, minMemType42=0, maxMemType42=0, minMemType1=0, maxMemType1=0)
+    fb.setupMaxp() # Crucial, calculates numGlyphs etc.
+
+    fb.save(filepath)
+    print(f"Minimal TTF saved to {filepath}")
+
+if __name__ == "__main__":
+    import os
+    if not os.path.exists("tests/data"):
+        os.makedirs("tests/data")
+    create_minimal_ttf()
+</file>
+
+<file path="tests/sample_data.bin">
+This is test data.
+</file>
+
+<file path="tests/test_cli_integration.py">
+import pytest
+from pathlib import Path
+import subprocess
+import sys
+
+# Helper to get the path to the pyfthintfreeze executable script
+# This might need adjustment depending on how the CLI is installed/run in test env
+# For an editable install, `pyfthintfreeze` should be on the PATH within the venv.
+CLI_EXECUTABLE = "pyfthintfreeze"
+TEST_DIR = Path(__file__).parent
+SAMPLE_TTF = TEST_DIR / "data" / "minimal.ttf"
+OUTPUT_DIR = TEST_DIR / "output"
+
+
+def run_cli_command(args: list[str]) -> subprocess.CompletedProcess:
+    """Runs the CLI tool with the given arguments."""
+    command = [CLI_EXECUTABLE] + args
+    # In some environments, it might be necessary to run `python -m opentype_hinting_freezer ...`
+    # or directly sys.executable + ["-m", "opentype_hinting_freezer..."]
+    # For now, assume pyfthintfreeze is on the PATH (e.g., in an activated venv with editable install)
+    return subprocess.run(command, capture_output=True, text=True, check=False)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def ensure_sample_ttf_exists():
+    """Ensure the sample TTF exists before tests run."""
+    if not SAMPLE_TTF.exists():
+        pytest.fail(
+            f"Sample TTF file missing: {SAMPLE_TTF}. "
+            "Run tests/generate_minimal_ttf.py to create it."
+        )
+
+@pytest.fixture(autouse=True)
+def manage_output_dir():
+    """Creates and cleans up the output directory for each test."""
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    yield
+    # Cleanup: Remove files from output directory after test
+    for item in OUTPUT_DIR.iterdir():
+        item.unlink()
+    # Try to remove the directory if it's empty, ignore if it fails (e.g. other files)
+    try:
+        OUTPUT_DIR.rmdir()
+    except OSError:
+        pass
+
+
+def test_cli_basic_run_creates_output():
+    """Test a basic CLI run creates an output file."""
+    output_filename = "minimal.fhf-12-mono.ttf"
+    args = [
+        str(SAMPLE_TTF),
+        "--ppm=12",
+        "--mode=mono",
+        f"--out={OUTPUT_DIR / output_filename}",
+    ]
+    result = run_cli_command(args)
+
+    assert result.returncode == 0, f"CLI errored: {result.stderr}"
+    output_file = OUTPUT_DIR / output_filename
+    assert output_file.exists(), f"Output file was not created: {output_file}"
+    assert output_file.stat().st_size > 0, "Output file is empty"
+
+    # TODO: Add more checks, e.g., try to load the output with fontTools
+    # from fontTools.ttLib import TTFont
+    # try:
+    #     TTFont(output_file)
+    # except Exception as e:
+    #     pytest.fail(f"Output file is not a valid TTF: {e}")
+
+
+def test_cli_help_message():
+    """Test that the CLI shows a help message."""
+    result_help = run_cli_command(["--help"])
+    # Python-fire prints help to stderr.
+    command_name_in_help = "NAME\n    pyfthintfreeze"
+    synopsis_in_help = "SYNOPSIS\n    pyfthintfreeze FONTPATH <flags>"
+    # The specific description from the docstring's first line might not appear
+    # in the main --help output in a straightforward way with Fire for single functions.
+    # Focusing on essential help components.
+
+    # Fire usually exits with 0 when displaying help.
+    assert result_help.returncode == 0, \
+        f"CLI --help exited with {result_help.returncode}.\nstderr: {result_help.stderr}\nstdout: {result_help.stdout}"
+
+    # Check that key structural elements are in stderr
+    assert command_name_in_help in result_help.stderr, \
+        f"Command name section not found in stderr.\nstderr: {result_help.stderr}"
+    assert synopsis_in_help in result_help.stderr, \
+        f"Synopsis section not found in stderr.\nstderr: {result_help.stderr}"
+    # Check for presence of key arguments/flags
+    assert "FONTPATH" in result_help.stderr, \
+        f"Positional argument 'FONTPATH' not found in help (stderr).\nstderr: {result_help.stderr}"
+    assert "--ppm" in result_help.stderr, \
+        f"Flag '--ppm' not found in help (stderr).\nstderr: {result_help.stderr}"
+    assert "--mode" in result_help.stderr, \
+        f"Flag '--mode' not found in help (stderr).\nstderr: {result_help.stderr}"
+
+
+# More integration tests can be added here:
+# - Different modes
+# - Different PPM values
+# - Output path auto-generation
+# - Handling of TTC files (if sample TTC is available)
+# - Variable font functionality (if sample variable font is available and func is complete)
+# - Error conditions (e.g., invalid font file, invalid params)
+</file>
+
+<file path="tests/test_hintingfreezer_unit.py">
+import pytest
+from pathlib import Path
+from opentype_hinting_freezer.hintingfreezer import read_from_path
+
+# Get the directory of the current test file
+TEST_DIR = Path(__file__).parent
+
+
+def test_read_from_path_success():
+    """Test successfully reading data from a file."""
+    sample_file_path = TEST_DIR / "sample_data.bin"
+    # create_file_with_block adds a newline at the end of the file.
+    expected_content = b"This is test data.\n"
+
+    # Ensure the file exists for the test (it should, from previous step)
+    assert sample_file_path.exists(), "Test data file is missing!"
+
+    file_content = read_from_path(sample_file_path)
+    assert file_content == expected_content
+
+
+def test_read_from_path_file_not_found():
+    """Test FileNotFoundError when reading a non-existent file."""
+    non_existent_file = TEST_DIR / "non_existent_file.bin"
+    with pytest.raises(FileNotFoundError):
+        read_from_path(non_existent_file)
+
+# More unit tests will be added here for other functions/methods
+# in hintingfreezer.py, such as parts of FontHintFreezer.
+# For now, this is a starting point.
+
+# Example of a placeholder for a more complex test:
+# def test_font_hint_freezer_initialization():
+#     # This would require a minimal TTF/OTF file or mocked font data
+#     # from opentype_hinting_freezer.hintingfreezer import FontHintFreezer
+#     # sample_ttf_path = TEST_DIR / "sample.ttf" # Create this file
+#     # font_data = read_from_path(sample_ttf_path)
+#     # freezer = FontHintFreezer(font_data=font_data, ppm=12, render_mode="mono")
+#     # assert freezer.ppm == 12
+#     # assert freezer.upm > 0 # Basic check
+#     pass
+</file>
+
+<file path="AUTHORS.txt">
+Adam Twardoch <adam+github@twardoch.com>
+</file>
+
+<file path="CONTRIBUTORS.txt">
+Adam Twardoch <adam+github@twardoch.com>
+Just van Rossum
+</file>
+
+<file path="LICENSE">
+Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   APPENDIX: How to apply the Apache License to your work.
+
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "[]"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
+
+   Copyright [yyyy] [name of copyright owner]
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+</file>
+
+<file path="mypy.ini">
+[mypy]
+python_version = 3.9
+warn_return_any = True
+warn_unused_configs = True
+ignore_missing_imports = True
+
+# Per-module settings can be added here if needed
+# Example:
+# [mypy-somelibrary.*]
+# ignore_missing_imports = True
+</file>
+
+<file path="pyproject.toml">
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opentype-hinting-freezer"
+dynamic = ["version"]
+description = "A tool that applies the hinting of an OT font to the contours at a specified PPM size, and outputs the font with modified contours."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+keywords = ["fonts", "opentype", "hinting"]
+authors = [
+  { name = "Adam Twardoch", email = "adam+github@twardoch.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Topic :: Text Processing :: Fonts",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "fire>=0.3.1",
+  "fontTools>=4.38.0",
+  "freetype-py>=2.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/twardoch/fonttools-opentype-hinting-freezer"
+Documentation = "https://github.com/twardoch/fonttools-opentype-hinting-freezer#readme"
+Repository = "https://github.com/twardoch/fonttools-opentype-hinting-freezer"
+Changelog = "https://github.com/twardoch/fonttools-opentype-hinting-freezer/releases"
+
+[project.scripts]
+pyfthintfreeze = "opentype_hinting_freezer.__main__:cli"
+
+[tool.hatch.version]
+source = "vcs"
+path = "opentype_hinting_freezer/__init__.py" # Ensure this is the correct path
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/.gitignore",
+  "/assets",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["opentype_hinting_freezer"]
+
+# Updated section for dev dependencies and scripts for Ruff
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "mypy",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+]
+
+[tool.hatch.envs.default]
+skip-install = true
+dependencies = [
+  "ruff",
+  "mypy",
+  "pytest",       # Added pytest
+  "pytest-cov",   # Added pytest-cov
+  "pre-commit",
+]
+features = ["dev"] # Install the 'dev' extras into the default hatch env
+
+[tool.hatch.scripts]
+# Code quality
+lint = "ruff check ."
+format = "ruff format ."
+typecheck = "mypy --config-file mypy.ini ."
+
+# Testing
+test = "pytest -v"
+test-cov = "pytest -v --cov=opentype_hinting_freezer --cov-report=term-missing --cov-report=xml"
+
+# Build
+build = "hatch build"
+
+# Cleaning (optional, but good practice)
+clean = [
+    "rm -rf ./*.egg-info",
+    "rm -rf ./.eggs",
+    "rm -rf ./dist",
+    "rm -rf ./.mypy_cache",
+    "rm -rf ./.pytest_cache",
+    "rm -rf ./htmlcov",
+    "rm -rf ./.ruff_cache",
+    "find . -name '*.pyc' -delete",
+    "find . -name '__pycache__' -type d -delete",
+]
+
+# Combined checks (useful for CI or pre-commit)
+check = ["hatch run format", "hatch run lint", "hatch run typecheck"] # Add "hatch run test" later
+# For a full local CI check including build:
+# ci-check = ["hatch run check", "hatch run build"]
+
+# Ruff configuration
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "C90", # mccabe complexity
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "ARG", # flake8-unused-arguments
+    "RUF", # Ruff-specific rules
+]
+ignore = [] # Start with no ignores, E501 (line too long) will be handled by formatter
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["opentype_hinting_freezer"]
+
+# This was previously under [tool.hatch.metadata.hooks.vcs]
+# For hatch-vcs, the configuration for writing the version to a file
+# is typically done under [tool.hatch.version.file] if using hatchling >= 1.5.0
+# or directly in [tool.hatch.version] for older versions.
+# Given `source = "vcs"`, `path` is the correct way to specify the file for version updates.
+# Let's remove the fallback-version from here as it's not standard in this new structure.
+# hatch-vcs has its own fallback mechanisms.
+# The `template` option is also not used with `path`. `hatch-vcs` will look for `__version__ = "..."`
+# Ensure `opentype_hinting_freezer/__init__.py` contains `__version__ = "0.0.0"` or similar.
+# I'll modify `__init__.py` to ensure it has a version string for hatch-vcs.
+# The original __init__.py has `__version__ = "0.1.0"`, which is fine.
+# `hatch-vcs` will update this line.
+# The field in `[tool.hatch.version]` should be `path` not `version-file`.
+# Corrected this.
+# Also, ensure `hatch-vcs` is in `[build-system].requires`. It is.
+# The `dynamic = ["version"]` in `[project]` is correct.
+# `[tool.hatch.version]` with `source = "vcs"` and `path` is the modern way.
+# Removed the `[tool.hatch.metadata.hooks.vcs]` section as it's superseded by `[tool.hatch.version].path`.
+# The `ignore = ["E501"]` for ruff.lint was removed. If `line-length` is set for ruff format,
+# and ruff format is run, it should fix line length issues.
+# If not, E501 can be added back if preferred over auto-formatting for line length.
+# For now, relying on the formatter.
+# Added `ruff` to `[tool.hatch.envs.default.dependencies]` as well, for convenience if user runs `hatch shell`.
+# The `[tool.hatch.scripts]` for `lint` and `format` are defined.
+# The Ruff configuration itself is added to `pyproject.toml` under `[tool.ruff]`.
+# This includes line length, selected rules, and formatter settings.
+# `known-first-party` for isort is set.
+# This should correctly set up pyproject.toml and configure Ruff.
+</file>
+
+<file path=".gitignore">
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+.DS_Store
+</file>
+
+<file path="opentype_hinting_freezer/__init__.py">
+from .hintingfreezer import freezehinting
+
+__version__ = "0.1.0"
+</file>
+
+<file path="opentype_hinting_freezer/__main__.py">
+#!/usr/bin/env python3
+import fire
+
+from .hintingfreezer import freezehinting
+
+
+def custom_display(lines: List[str], out: IO[Any]) -> None:
+    print(*lines, file=out)
+
+
+def cli() -> None:
+    fire.core.Display = custom_display
+    fire.Fire(freezehinting)
+
+
+if __name__ == "__main__":
+    cli()
+</file>
+
+<file path="setup.py">
+#!/usr/bin/env python3
+
+import re
+from pathlib import Path
+
+from setuptools import find_packages, setup
+
+NAME = "opentype_hinting_freezer"
+
+
+def get_version(*args):
+    verstrline = open(Path(NAME, "__init__.py")).read()
+    VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+    return mo[1] if (mo := re.search(VSRE, verstrline, re.M)) else "undefined"
+
+
+setup(
+    name=f"{NAME}",
+    version=get_version(),
+    description="A tool that applies the hinting of an OT font to the contours at a specified PPM size, and outputs the font with modified contours.",
+    long_description=open(
+        Path(Path(__file__).parent, "README.md"), encoding="utf-8"
+    ).read(),
+    long_description_content_type="text/markdown",
+    keywords=[
+        "fonts",
+    ],
+    url="https://github.com/twardoch/fonttools-opentype-feature-freezer",
+    author="Adam Twardoch",
+    author_email="adam+github@twardoch.com",
+    license="Apache 2.0",
+    python_requires=">=3.9",
+    packages=find_packages(),
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Information Technology",
+        "Topic :: Text Processing :: Fonts",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+    ],
+    entry_points={
+        "console_scripts": [f"pyfthintfreeze={NAME}.__main__:cli"],
+    },
+)
+</file>
+
+<file path="opentype_hinting_freezer/hintingfreezer.py">
+#!/usr/bin/env python3
+import io
+from pathlib import Path
+
+from fontTools.pens.pointPen import PointToSegmentPen
+from fontTools.pens.t2CharStringPen import T2CharStringPen
+from fontTools.pens.ttGlyphPen import TTGlyphPointPen
+from fontTools.ttLib import TTFont
+from freetype import *
+
+renderModeFlags = {
+    "lcd": FT_LOAD_TARGET_LCD,
+    "mono": FT_LOAD_TARGET_MONO,
+    "lcdv": FT_LOAD_TARGET_LCD_V,
+    "light": FT_LOAD_TARGET_LIGHT,
+}
+
+
+class FontHintFreezer:
+    ttFont: TTFont  # Actual type from fontTools
+    ftFace: Face    # Actual type from freetype
+    glyphSet: Mapping[str, Any] # From ttFont.getGlyphSet()
+    glyphNames: KeysView[str]
+    glyphName: str
+    width: int
+    lsb: int
+    upm: int
+    ppm: int
+    rescale_metrics: float
+    rescale_glyphs: int
+    ft_flag: int  # FreeType load flag (integer)
+    ftGlyph: Any  # freetype.GlyphSlot object
+
+    def __init__(
+        self,
+        font_data: bytes,
+        font_number: int = 0,
+        ppm: Optional[int] = None,
+        render_mode: str = "lcd",
+    ) -> None:
+        stream = io.BytesIO(font_data)
+        self.ttFont = TTFont(stream, fontNumber=font_number, lazy=False)
+        stream = io.BytesIO(font_data)
+        self.ftFace = Face(stream, index=font_number)
+        # getGlyphSet returns a _TTGlyphSet, which is a Mapping.
+        self.glyphSet = self.ttFont.getGlyphSet()
+        self.glyphNames = self.glyphSet.keys()
+        self.glyphName = ""
+        self.width = 0
+        self.lsb = 0
+        self.upm = self.ftFace.units_per_EM
+        self.ppm = ppm or self.upm # ppm can't be 0
+        self.rescale_metrics = float(self.upm) / float(self.ppm) / 64.0
+        self.rescale_glyphs = int(float(self.upm) / float(self.ppm) / 64.0 * 0x10000)
+        self.ftFace.set_char_size(self.ppm * 64, 0, 72, 0)
+        self.ftFace.set_transform(
+            Matrix(self.rescale_glyphs, 0, 0, self.rescale_glyphs), Vector(0, 0)
+        )
+        self.ft_flag = RENDER_MODE_FLAGS.get(render_mode, FT_LOAD_TARGET_LCD)
+
+    def set_var_location(self, var_location: Dict[str, float]) -> None:
+        if "fvar" not in self.ttFont:
+            return
+        coordinates_values: List[float] = [
+            var_location.get(axis.axisTag, axis.defaultValue)
+            for axis in self.ttFont["fvar"].axes
+        ]
+        ft_coordinates_values: List[int] = [round(v * 0x10000) for v in coordinates_values]
+        c_coordinates = (FT_Fixed * len(ft_coordinates_values))(*ft_coordinates_values)
+        FT_Set_Var_Design_Coordinates(
+            self.ftFace._FT_Face, len(ft_coordinates_values), c_coordinates
+        )
+
+    def prep_glyph(self) -> None:
+        glyph_id: int = self.ttFont.getGlyphID(self.glyphName)
+        self.ftFace.load_glyph(glyph_id, FT_LOAD_RENDER | self.ft_flag)
+        self.ftGlyph = self.ftFace.glyph
+        self.lsb = int(self.ftGlyph.metrics.horiBearingX * self.rescale_metrics)
+        self.width = int(self.ftGlyph.metrics.horiAdvance * self.rescale_metrics)
+
+    def draw_glyph_to_point_pen(self, pen: Any) -> None:  # pen is a PointPen
+        # ftGlyph is GlyphSlot, outline is Outline
+        contours: Iterator[int] = (i + 1 for i in self.ftGlyph.outline.contours)
+        points: List[Tuple[int, int]] = self.ftGlyph.outline.points # points are tuples of int
+        flags: List[int] = self.ftGlyph.outline.tags # tags are list of int (bytes really)
+        # The commented print line:
+        # print(
+        #    self.glyphName,
+        #    self.ftFace.glyph.get_glyph().get_cbox(freetype.FT_GLYPH_BBOX_PIXELS),
+        # )
+        curve_type: str = "curve" if any(t & 0x02 for t in flags) else "qcurve"
+        from_index: int = 0
+        for to_index in contours:
+            c_points: List[Tuple[int, int]] = points[from_index:to_index]
+            c_flags: List[int] = flags[from_index:to_index]
+            pen.beginPath()
+            for i_idx, (pt_x, pt_y) in enumerate(c_points): # Iterate properly
+                point_coord: Tuple[int, int] = (pt_x, pt_y)
+                segment_type: Optional[str] = None
+                if not c_flags[i_idx] & 0x01: # current point is off-curve
+                    segment_type = None
+                elif c_flags[i_idx -1] & 0x01: # previous point was on-curve
+                    segment_type = "line"
+                else: # previous point was off-curve, current is on-curve
+                    segment_type = curve_type
+                pen.addPoint(point_coord, segmentType=segment_type)
+            pen.endPath()
+            from_index = to_index
+
+    def draw_glyph_to_pen(self, pen: Any) -> None:  # pen is a SegmentPen
+        # PointToSegmentPen expects a SegmentPen
+        self.draw_glyph_to_point_pen(PointToSegmentPen(pen))
+
+    def draw_glyph_to_tt_glyph(self) -> None:
+        self.prep_glyph()
+        # TTGlyphPointPen expects a glyphSet
+        pen = TTGlyphPointPen(glyphSet=self.glyphSet, handleOverflowingTransforms=True)
+        self.draw_glyph_to_point_pen(pen)
+        self.ttFont["glyf"][self.glyphName] = pen.glyph() # type: ignore[index]
+        self.ttFont["hmtx"][self.glyphName] = (self.width, self.lsb) # type: ignore[index]
+
+    def draw_glyph_to_ps_glyph(self) -> None:
+        cff = self.ttFont["CFF "].cff # type: ignore[index]
+        top_dict: Any = cff.topDictIndex[0]
+        self.prep_glyph()
+        # print(self.glyphName, self.lsb, self.width) # Removed debug print
+        # T2CharStringPen expects width and glyphSet
+        pen = T2CharStringPen(
+            width=self.width, glyphSet=self.glyphSet, roundTolerance=0.5, CFF2=False
+        )
+        self.draw_glyph_to_pen(pen)
+        top_dict.CharStrings.charStringsIndex.items.append(None)
+        i: int = len(top_dict.CharStrings.charStringsIndex) - 1
+        top_dict.CharStrings.charStringsIndex[i] = pen.getCharString(
+            private=top_dict.Private
+        )
+        top_dict.CharStrings.charStrings[self.glyphName] = i
+        self.ttFont["hmtx"][self.glyphName] = (self.width, self.lsb) # type: ignore[index]
+
+    def freeze_hints(self) -> None:
+        if "glyf" in self.ttFont: # type: ignore[operator]
+            for glyph_name_loopvar in self.glyphNames:
+                self.glyphName = glyph_name_loopvar
+                self.draw_glyph_to_tt_glyph()
+        elif "CFF " in self.ttFont: # type: ignore[operator]
+            cff = self.ttFont["CFF "].cff # type: ignore[index]
+            cff.desubroutinize()
+            for glyph_name_loopvar in self.glyphNames:
+                self.glyphName = glyph_name_loopvar
+                self.draw_glyph_to_ps_glyph()
+
+
+def read_from_path(path: Union[str, Path]) -> bytes:
+    with open(path, "rb") as f:
+        fontData = f.read()
+    return fontData
+
+
+def freezehinting(fontpath, out=None, ppm=None, subfont=0, var=None, mode="lcd"):
+    """
+    OpenType font hinting freezer \n
+    A tool that applies the hinting of an OT font
+    to the contours at a specified PPM size,
+    and outputs the font with modified contours
+    (Works better with TTF, OTF support is buggy)
+
+    Example:
+    pyfthintfreeze font.ttf --ppm=14 --mode="mono"
+
+    :param fontpath: path to an OTF or TTF or TTC file
+    :param out: output path, automatic if absent
+    :param ppm: pixel-per-em for applying the hinting
+    :param subfont: subfont index in a TTC file
+    :param var: NOT IMPLEMENTED variable font location as a dict
+    :param mode: hinting mode: "lcd" (default), "lcdv", "mono", "light"
+    """
+    fhf = FontHintFreezer(
+        read_from_path(fontpath),
+        font_number=subfont,
+        ppm=ppm,
+        render_mode=mode,
+    )
+
+    if var and "fvar" in fhf.ttFont: # type: ignore[operator]
+        fhf.set_var_location(var)
+
+    fhf.freeze_hints()
+
+    output_path: Path
+    if out:
+        output_path = Path(out)
+    else:
+        # Ensure ppm is not None for path generation if it was None for FontHintFreezer
+        # FontHintFreezer defaults ppm to upm if None. We need a value for the filename.
+        ppm_for_filename = ppm if ppm is not None else fhf.ppm
+        font_path_obj = Path(fontpath)
+        output_path = Path(
+            f"{font_path_obj.stem}.fhf-{ppm_for_filename}-{mode}{font_path_obj.suffix}"
+        )
+    fhf.ttFont.save(output_path)
+</file>
+
+<file path="README.md">
+# OpenType Hinting Freezer (`pyfthintfreeze`)
+
+`pyfthintfreeze` is a command-line tool and Python 3.x library that applies the TrueType hinting of an existing OpenType font to its contours at a specified Pixels-Per-EM (PPM) size. It then outputs a new font with these modified, "frozen" contours. This process effectively "bakes in" the hinting adjustments for a specific size directly into the outlines.
+
+The tool uses FreeType to execute the font's hinting instructions. While it works best with TTF (TrueType flavored) fonts, basic support for OTF (CFF flavored) fonts is present but may be buggy.
+
+This project has been modernized to use current Python packaging and development best practices, including `pyproject.toml` with Hatch for building, `uv` for environment management, Ruff for linting/formatting, Mypy for type checking, Pytest for testing, and pre-commit hooks for quality assurance.
+
+## Installation
+
+This tool will be available on PyPI. Once published, you can install it using pip:
+
+```bash
+pip install opentype-hinting-freezer
+```
+
+Alternatively, to install the latest version directly from GitHub:
+
+```bash
+pip install git+https://github.com/twardoch/fonttools-opentype-hinting-freezer.git
+```
+
+Or, after cloning the repository, you can install it locally (preferably in a virtual environment):
+```bash
+# Using pip
+pip install .
+
+# Or with uv (see Development Setup for installing uv)
+uv pip install .
+```
+
+## Usage
+
+The primary interface is the `pyfthintfreeze` command-line tool.
+
+```
+NAME
+    pyfthintfreeze - OpenType font hinting freezer.
+
+SYNOPSIS
+    pyfthintfreeze FONTPATH <flags>
+
+DESCRIPTION
+    A tool that applies the hinting of an OT font
+    to the contours at a specified PPM size,
+    and outputs the font with modified contours.
+    (Works better with TTF, OTF support is buggy)
+
+    Example:
+    pyfthintfreeze font.ttf --ppm=14 --mode="mono"
+
+POSITIONAL ARGUMENTS
+    FONTPATH
+        Path to an OTF, TTF, or TTC file.
+
+FLAGS
+    --out=OUT
+        Output path for the modified font. If absent, an automatic name is generated
+        in the same directory as the input font (e.g., `font.fhf-12-mono.ttf`).
+    --ppm=PPM
+        The Pixels-Per-EM (PPM) size at which the hinting should be applied.
+        If not provided, the font's units-per-EM will be used (effectively no scaling).
+    --subfont=SUBFONT
+        The index of the subfont to process in a TTC (TrueType Collection) file.
+        Default: 0.
+    --var=VAR
+        Variable font location as a dictionary string (e.g., '{"wght": 700, "wdth": 100}').
+        This is applied if the font is a variable font and has an 'fvar' table.
+        Example: --var='{"wght":750}'
+    --mode=MODE
+        Hinting mode. Options:
+        - "lcd" (default): Subpixel anti-aliasing for LCD screens.
+        - "lcdv": Vertical LCD subpixel anti-aliasing.
+        - "mono": Monochrome (black and white) rendering.
+        - "light": Lighter anti-aliasing, suitable for high-DPI screens.
+
+NOTES
+    You can also use flags syntax for POSITIONAL ARGUMENTS (e.g., --fontpath=path/to/font.ttf).
+```
+
+## Contributing
+
+Contributions are welcome! Please follow these guidelines.
+
+### Development Environment Setup
+
+We recommend using `uv` for fast environment and package management, and `hatch` for task running (linting, testing, building), which is configured in `pyproject.toml`.
+
+1.  **Install `uv`**:
+    Follow the official instructions to install `uv`: [https://github.com/astral-sh/uv#installation](https://github.com/astral-sh/uv#installation)
+
+2.  **Create and activate a virtual environment**:
+    ```bash
+    uv venv .venv
+    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+    ```
+
+3.  **Install dependencies**:
+    Install the project in editable mode along with development dependencies:
+    ```bash
+    uv pip install -e .[dev]
+    ```
+    This installs `opentype-hinting-freezer` and tools like Ruff, Mypy, Pytest.
+
+### Running Quality Checks and Tests
+
+Common development tasks are defined as scripts in `pyproject.toml` and can be run with `hatch`.
+
+*   **Formatting**: `hatch run format` (uses Ruff to format code)
+*   **Linting**: `hatch run lint` (uses Ruff to check for style issues)
+*   **Type Checking**: `hatch run typecheck` (uses Mypy)
+*   **Testing**: `hatch run test` (uses Pytest to run unit and integration tests)
+*   **Test Coverage**: `hatch run test-cov` (runs tests and shows coverage report)
+*   **All Checks**: `hatch run check` (runs format, lint, typecheck - tests can be added here too)
+*   **Building**: `hatch run build` (builds sdist and wheel)
+
+### Pre-commit Hooks
+
+This project uses `pre-commit` to ensure code quality before committing. After installing development dependencies (which includes `pre-commit`), install the git hooks:
+
+```bash
+pre-commit install
+```
+The configured hooks (Ruff, Mypy) will now run automatically on every commit.
+
+### Codebase Structure
+
+The project is organized as follows:
+
+*   `opentype_hinting_freezer/`: The main package directory.
+    *   `__init__.py`: Makes the directory a package and exports the main `freezehinting` function and `__version__`.
+    *   `__main__.py`: Provides the command-line interface (CLI) entry point using `python-fire`. It imports `freezehinting` and exposes it to the CLI.
+    *   `hintingfreezer.py`: Contains the core logic.
+        *   `FontHintFreezer` class: Handles the actual process of loading a font with FreeType, applying hinting at a specific PPM, and extracting the modified glyph outlines.
+        *   `read_from_path()`: A utility function to read font data from a file path.
+        *   `freezehinting()`: The main public function that orchestrates the process using `FontHintFreezer`. It's the primary function imported by `__main__.py` for the CLI and can also be used as a library function.
+*   `tests/`: Contains all tests.
+    *   `data/`: Test assets, like the `minimal.ttf` font.
+    *   `generate_minimal_ttf.py`: Script to generate `minimal.ttf`.
+    *   `test_hintingfreezer_unit.py`: Unit tests for components within `hintingfreezer.py`.
+    *   `test_cli_integration.py`: Integration tests for the `pyfthintfreeze` CLI.
+*   `pyproject.toml`: Defines project metadata, dependencies, build system (Hatch), and tool configurations (Ruff, Mypy via `mypy.ini` which is referenced).
+*   `mypy.ini`: Configuration for Mypy static type checker.
+*   `.pre-commit-config.yaml`: Configuration for pre-commit hooks.
+*   `.github/workflows/ci.yml`: GitHub Actions workflow for continuous integration (linting, testing, building across Python versions).
+
+### Data Flow (Simplified)
+
+1.  **CLI (`__main__.py`) / Library Call (`freezehinting`)**: User provides font path, PPM, mode, etc.
+2.  `freezehinting()` in `hintingfreezer.py` is called.
+3.  `read_from_path()` reads font data.
+4.  A `FontHintFreezer` instance is created with the font data and parameters.
+    *   `__init__`: Loads the font with `fontTools.ttLib.TTFont` and `freetype.Face`. Sets up scaling factors based on PPM and UPM. Configures FreeType for the specified rendering mode and PPM.
+    *   If variable font parameters (`var`) are provided, `set_var_location()` is called to set the FreeType instance to that design location.
+5.  `freeze_hints()` method is called on the `FontHintFreezer` instance.
+    *   It iterates through glyphs in the font.
+    *   For each glyph:
+        *   `prep_glyph()`: Loads the glyph with FreeType at the chosen PPM and render mode, which applies hinting. Extracts metrics (width, LSB).
+        *   `draw_glyph_to_point_pen()` (or `draw_glyph_to_ps_glyph` for CFF): Extracts the hinted outline points from FreeType.
+        *   The points are drawn into a new `fontTools` glyph object.
+        *   The new glyph object replaces the old one in the `ttFont`'s `glyf` table (or `CFF ` table for OTF).
+        *   Hinted metrics replace old metrics in the `hmtx` table.
+6.  The modified `ttFont` object is saved to the output file path.
+
+## Examples
+
+```
+pyfthintfreeze CharisSIL-Regular.ttf --ppm=12 --mode="lcd"
+```
+
+Original [CharisSIL-Regular.ttf](https://github.com/google/fonts/blob/main/ofl/charissil/CharisSIL-Regular.ttf) font:
+
+![CharisSIL-Regular](./assets/CharisSIL-Regular.png)
+
+The font with hinting in LCD mode applied at 12 ppm:
+
+![CharisSIL-Regular.fhf-12-lcd.png](./assets/CharisSIL-Regular.fhf-12-lcd.png)
+
+---
+
+```
+pyfthintfreeze Roboto-Black.ttf --ppm=12 --mode="mono"
+```
+
+Original [Roboto-Black.ttf](https://github.com/google/fonts/blob/main/apache/roboto/static/Roboto-Black.ttf) font: 
+
+![Roboto-Black](./assets/Roboto-Black.png)
+
+The font with hinting in monochrome mode applied at 12 ppm: 
+
+![Roboto-Black.fhf-12-lcd.png](./assets/Roboto-Black.fhf-12-mono.png)
+
+## Credits and License
+
+- Copyright (c) 2022 by [Adam Twardoch and others](./AUTHORS.txt)
+- Code by [Adam Twardoch and others](./CONTRIBUTORS.txt)
+- Licensed under the [Apache-2.0 License](./LICENSE)
+</file>
+
+</files>
