@@ -86,6 +86,8 @@ hatch run test-cov
 
 ## CI/CD Pipeline
 
+**⚠️ SETUP REQUIRED**: The GitHub Actions workflows need to be manually set up due to permissions restrictions. See `GITHUB_WORKFLOWS_SETUP.md` for detailed instructions.
+
 ### Continuous Integration (CI)
 
 Triggers on:

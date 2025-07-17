@@ -1,3 +1,7 @@
+# GitHub Actions CI Workflow
+# File: .github/workflows/ci.yml
+# Note: This file should be moved to .github/workflows/ci.yml manually
+
 name: CI
 
 on:

@@ -1,3 +1,7 @@
+# GitHub Actions Release Workflow
+# File: .github/workflows/release.yml
+# Note: This file should be moved to .github/workflows/release.yml manually
+
 name: Release
 
 on:
