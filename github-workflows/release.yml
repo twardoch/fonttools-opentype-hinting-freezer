@@ -1,0 +1,189 @@
+# GitHub Actions Release Workflow
+# File: .github/workflows/release.yml
+# Note: This file should be moved to .github/workflows/release.yml manually
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install hatch
+        pip install -e .[dev]
+    
+    - name: Run tests
+      run: hatch run test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install hatch build
+    
+    - name: Build package
+      run: hatch build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: dist/
+
+  build-binaries:
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+          - os: windows-latest
+            target: windows-x86_64
+          - os: macos-latest
+            target: macos-x86_64
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install hatch pyinstaller
+        pip install -e .
+    
+    - name: Build binary (Linux/macOS)
+      if: matrix.os != 'windows-latest'
+      run: |
+        pyinstaller --onefile --name pyfthintfreeze-${{ matrix.target }} opentype_hinting_freezer/__main__.py
+        chmod +x dist/pyfthintfreeze-${{ matrix.target }}
+    
+    - name: Build binary (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        pyinstaller --onefile --name pyfthintfreeze-${{ matrix.target }}.exe opentype_hinting_freezer/__main__.py
+    
+    - name: Upload binary artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries-${{ matrix.target }}
+        path: dist/pyfthintfreeze-*
+
+  publish:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install hatch twine
+    
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: dist
+        path: dist/
+    
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        twine upload dist/*
+
+  release:
+    needs: [test, build, build-binaries, publish]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*
+          binaries-*/*
+        body: |
+          ## Changes
+          
+          See [CHANGELOG.md](https://github.com/twardoch/fonttools-opentype-hinting-freezer/blob/main/CHANGELOG.md) for detailed changes.
+          
+          ## Installation
+          
+          ### Python Package
+          ```bash
+          pip install opentype-hinting-freezer
+          ```
+          
+          ### Standalone Binaries
+          Download the appropriate binary for your platform from the assets below.
+          
+          ## Usage
+          
+          ```bash
+          pyfthintfreeze font.ttf --ppm=14 --mode="mono"
+          ```
+          
+          For more information, see the [README](https://github.com/twardoch/fonttools-opentype-hinting-freezer#readme).
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

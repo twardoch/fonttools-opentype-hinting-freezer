@@ -43,7 +43,7 @@ pyfthintfreeze = "opentype_hinting_freezer.__main__:cli"
 
 [tool.hatch.version]
 source = "vcs"
-path = "opentype_hinting_freezer/__init__.py" # Ensure this is the correct path
+path = "opentype_hinting_freezer/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -63,6 +63,7 @@ dev = [
   "pre-commit",
   "pytest",
   "pytest-cov",
+  "psutil",  # For performance tests
 ]
 
 [tool.hatch.envs.default]
@@ -85,6 +86,8 @@ typecheck = "mypy --config-file mypy.ini ."
 # Testing
 test = "pytest -v"
 test-cov = "pytest -v --cov=opentype_hinting_freezer --cov-report=term-missing --cov-report=xml"
+test-fast = "pytest -v -m 'not slow'"
+test-slow = "pytest -v -m 'slow'"
 
 # Build
 build = "hatch build"
@@ -103,7 +106,7 @@ clean = [
 ]
 
 # Combined checks (useful for CI or pre-commit)
-check = ["hatch run format", "hatch run lint", "hatch run typecheck"] # Add "hatch run test" later
+check = ["hatch run format", "hatch run lint", "hatch run typecheck", "hatch run test-fast"]
 # For a full local CI check including build:
 # ci-check = ["hatch run check", "hatch run build"]
 
@@ -137,6 +140,15 @@ line-ending = "auto"
 
 [tool.ruff.lint.isort]
 known-first-party = ["opentype_hinting_freezer"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 
 # This was previously under [tool.hatch.metadata.hooks.vcs]
 # For hatch-vcs, the configuration for writing the version to a file
