@@ -1,0 +1,13 @@
+48	./llms.txt
+46	./assets/CharisSIL-Regular.png
+45	./assets/CharisSIL-Regular.fhf-12-lcd.png
+41	./assets/Roboto-Black.fhf-12-mono.png
+40	./assets/Roboto-Black.png
+18	./README.md
+11	./LICENSE
+10	./PLAN.md
+8	./opentype_hinting_freezer/hintingfreezer.py
+6	./pyproject.toml
+4	./TODO.md
+4	./tests/test_cli_integration.py
+2	./tests/generate_minimal_ttf.py
