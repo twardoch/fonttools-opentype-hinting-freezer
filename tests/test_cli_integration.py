@@ -30,6 +30,7 @@ def ensure_sample_ttf_exists():
             "Run tests/generate_minimal_ttf.py to create it."
         )
 
+
 @pytest.fixture(autouse=True)
 def manage_output_dir():
     """Creates and cleans up the output directory for each test."""
@@ -80,21 +81,27 @@ def test_cli_help_message():
     # Focusing on essential help components.
 
     # Fire usually exits with 0 when displaying help.
-    assert result_help.returncode == 0, \
+    assert result_help.returncode == 0, (
         f"CLI --help exited with {result_help.returncode}.\nstderr: {result_help.stderr}\nstdout: {result_help.stdout}"
+    )
 
     # Check that key structural elements are in stderr
-    assert command_name_in_help in result_help.stderr, \
+    assert command_name_in_help in result_help.stderr, (
         f"Command name section not found in stderr.\nstderr: {result_help.stderr}"
-    assert synopsis_in_help in result_help.stderr, \
+    )
+    assert synopsis_in_help in result_help.stderr, (
         f"Synopsis section not found in stderr.\nstderr: {result_help.stderr}"
+    )
     # Check for presence of key arguments/flags
-    assert "FONTPATH" in result_help.stderr, \
+    assert "FONTPATH" in result_help.stderr, (
         f"Positional argument 'FONTPATH' not found in help (stderr).\nstderr: {result_help.stderr}"
-    assert "--ppm" in result_help.stderr, \
+    )
+    assert "--ppm" in result_help.stderr, (
         f"Flag '--ppm' not found in help (stderr).\nstderr: {result_help.stderr}"
-    assert "--mode" in result_help.stderr, \
+    )
+    assert "--mode" in result_help.stderr, (
         f"Flag '--mode' not found in help (stderr).\nstderr: {result_help.stderr}"
+    )
 
 
 # More integration tests can be added here:

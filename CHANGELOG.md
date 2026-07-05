@@ -7,33 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Import crash (regression in v1.0.0/v1.0.1):** the package could not be
+  imported at all. Class and function annotations referenced typing names
+  (`Mapping`, `Any`, `Optional`, ...) that were never imported, and the CLI
+  referenced `List`/`IO`/`Any` in `__main__.py` with no import — both raised
+  `NameError` on import.
+- The render-mode lookup referenced `RENDER_MODE_FLAGS` while the dict was named
+  `renderModeFlags`, so any run raised `NameError`. Unified to `RENDER_MODE_FLAGS`.
+
 ### Added
-- Comprehensive test suite with Pytest
-  - Unit tests for core functionality
-  - Integration tests for CLI
-  - Test data generation utilities
-- Type hints throughout the codebase
-- Pre-commit hooks for code quality (Ruff, Mypy)
-- GitHub Actions CI/CD workflow
-- Development documentation in README
-- Modern Python packaging with pyproject.toml
+- Input validation in `freezehinting()`: a non-positive `ppm` and an unknown
+  `--mode` now raise a clear `ValueError` instead of silently doing the wrong
+  thing (zero ppm previously fell back to the em size; a bad mode fell back to
+  LCD).
+- A `UserWarning` when freezing hints into CFF/OTF outlines, whose support is
+  experimental.
+- `FontHintFreezer` and `__version__` are now exported from the package root.
+- Jekyll + Just-the-Docs site under `docs/`.
+- GitHub Actions CI (test matrix + lint/type) and tag-driven release workflow,
+  now correctly placed under `.github/workflows/`.
 
 ### Changed
-- Migrated from setup.py to pyproject.toml with Hatch build system
-- Integrated hatch-vcs for Git tag-based versioning
-- Replaced manual code formatting with Ruff
-- Enhanced code quality with static type checking (Mypy)
-- Updated Python requirement to >=3.9
-- Improved CLI error handling and help messages
-- Modernized project structure and documentation
-
-### Fixed
-- Type safety issues throughout the codebase
-- Various code style inconsistencies
+- `from freetype import *` replaced with explicit imports of the names used,
+  clearing the star-import lint and type-check gaps.
+- Type annotations modernized to built-in generics and `X | None`; `__version__`
+  now read from installed package metadata instead of a hard-coded string.
+- `mypy` target raised to 3.10 (the tool no longer supports a 3.9 target).
 
 ### Removed
-- Obsolete setup.py file
-- requirements.txt (dependencies now in pyproject.toml)
+- `setup.py` (packaging fully handled by `pyproject.toml` + hatch-vcs).
+- Stale scaffolding files: `llms.txt`, `IMPLEMENTATION_SUMMARY.md`,
+  `REFACTOR_SPLITTING.md`, `REFACTOR_FILELIST.txt`, `GITHUB_WORKFLOWS_SETUP.md`,
+  `README_DEVELOPMENT.md`, and the inert `github-workflows/` directory.
+
+## [1.0.0] - [1.0.1]
+
+Packaging modernization (pyproject + hatch-vcs, Ruff, Mypy, pytest suite,
+type hints). Note: both tags shipped with an import-time crash, fixed in the
+next release.
 
 ## [0.1.0] - 2022-01-14
 
@@ -47,5 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TrueType Collection (TTC) support
 - Apache 2.0 license
 
-[Unreleased]: https://github.com/twardoch/fonttools-opentype-hinting-freezer/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/twardoch/fonttools-opentype-hinting-freezer/compare/v1.0.1...HEAD
+[1.0.0] - [1.0.1]: https://github.com/twardoch/fonttools-opentype-hinting-freezer/compare/v0.1.0...v1.0.1
 [0.1.0]: https://github.com/twardoch/fonttools-opentype-hinting-freezer/releases/tag/v0.1.0

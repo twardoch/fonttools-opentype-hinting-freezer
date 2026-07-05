@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 .DS_Store
+# Stray CLI outputs from running the tool in the repo root
+*.fhf-*.ttf
+*.fhf-*.otf

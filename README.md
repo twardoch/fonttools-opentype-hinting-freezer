@@ -2,7 +2,11 @@
 
 `pyfthintfreeze` is a command-line tool and Python 3.x library that applies the TrueType hinting of an existing OpenType font to its contours at a specified Pixels-Per-EM (PPM) size. It then outputs a new font with these modified, "frozen" contours. This process effectively "bakes in" the hinting adjustments for a specific size directly into the font's outlines.
 
-The tool leverages the FreeType library to execute the font's hinting instructions and extract the resulting pixel-fitted outlines. While it works best with TTF (TrueType flavored) fonts, basic support for OTF (CFF flavored) fonts is present but may be buggy.
+The tool leverages the FreeType library to execute the font's hinting instructions and extract the resulting pixel-fitted outlines. While it works best with TTF (TrueType flavored) fonts, basic support for OTF (CFF flavored) fonts is present but may be buggy; the tool emits a `UserWarning` when it takes that path.
+
+**Documentation:** https://twardoch.github.io/fonttools-opentype-hinting-freezer/ (also under `docs/`).
+
+A non-positive `--ppm` or an unknown `--mode` is rejected with a clear error rather than silently guessing.
 
 ## Who is this tool for?
 
@@ -237,9 +241,9 @@ The core logic of `pyfthintfreeze` revolves around using the FreeType library to
     *   `test_hintingfreezer_unit.py`: Unit tests for components within `hintingfreezer.py`.
     *   `test_cli_integration.py`: Integration tests for the `pyfthintfreeze` CLI.
 *   `assets/`: Contains images used in this README.
-*   `pyproject.toml`: Defines project metadata, dependencies, build system (Hatch), and configurations for tools like Ruff and Mypy (via `mypy.ini`).
-*   `setup.py`: Legacy setup file, primarily used by `setuptools` for tasks like `get_version()`. Modern packaging relies more on `pyproject.toml`.
+*   `pyproject.toml`: Defines project metadata, dependencies, build system (Hatch + hatch-vcs), and configurations for tools like Ruff and Mypy (via `mypy.ini`).
 *   `mypy.ini`: Configuration for the Mypy static type checker.
+*   `docs/`: Jekyll + Just-the-Docs documentation site.
 *   `.pre-commit-config.yaml`: Configuration for pre-commit hooks, ensuring code quality before commits.
 *   `.github/workflows/`: Contains GitHub Actions workflows for continuous integration (CI).
 

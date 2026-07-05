@@ -141,6 +141,10 @@ line-ending = "auto"
 [tool.ruff.lint.isort]
 known-first-party = ["opentype_hinting_freezer"]
 
+[tool.ruff.lint.per-file-ignores]
+# Several class attributes deliberately mirror fontTools/FreeType camelCase names.
+"opentype_hinting_freezer/hintingfreezer.py" = ["N815"]
+
 # Pytest configuration
 [tool.pytest.ini_options]
 minversion = "6.0"

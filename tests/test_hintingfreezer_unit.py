@@ -25,6 +25,7 @@ def test_read_from_path_file_not_found():
     with pytest.raises(FileNotFoundError):
         read_from_path(non_existent_file)
 
+
 # More unit tests will be added here for other functions/methods
 # in hintingfreezer.py, such as parts of FontHintFreezer.
 # For now, this is a starting point.

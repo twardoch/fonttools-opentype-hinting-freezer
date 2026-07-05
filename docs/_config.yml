@@ -1,0 +1,22 @@
+title: OpenType Hinting Freezer
+description: >-
+  Bake a font's TrueType hinting into its outlines at a chosen pixel size,
+  so text renders the same everywhere.
+remote_theme: just-the-docs/just-the-docs
+url: https://twardoch.github.io
+baseurl: /fonttools-opentype-hinting-freezer
+
+color_scheme: light
+search_enabled: true
+
+aux_links:
+  GitHub: https://github.com/twardoch/fonttools-opentype-hinting-freezer
+  PyPI: https://pypi.org/project/opentype-hinting-freezer/
+aux_links_new_tab: true
+
+plugins:
+  - jekyll-remote-theme
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
